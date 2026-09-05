@@ -7,52 +7,47 @@ An end-to-end factory data platform that ingests heterogeneous industrial data f
 ## 🏛️ Architecture Overview
 
 ```
-                      ┌─────────────────────────────────────────────────────────┐
-                      │                   Plant Data Sources                    │
-                      │                                                         │
-                      │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
-                      │  │  REST API    │  │ Supplier Web │  │ Production DB │  │
-                      │  │  (Port 3001) │  │ (Port 3002)  │  │ (Port 5433)   │  │
-                      │  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘  │
-                      │         │                 │                  │          │
-                      │         │           ┌─────┴──────────┐       │          │
-                      │         │           │ Mosquitto MQTT │       │          │
-                      │         │           │ (Port 1883)    │       │          │
-                      │         │           └─────┬──────────┘       │          │
-                      └─────────┼─────────────────┼──────────────────┼──────────┘
-                                │                 │                  │
-                                ▼                 ▼                  ▼
+┌────────────────────────────────────────────────────────────────────────────────────┐
+│                                Plant Data Sources                                  │
+│                                                                                    │
+│  ┌────────────────┐   ┌────────────────┐   ┌────────────────┐   ┌────────────────┐ │
+│  │    REST API    │   │  Supplier Web  │   │ Production DB  │   │ Mosquitto MQTT │ │
+│  │  (Port 3001)   │   │  (Port 3002)   │   │  (Port 5433)   │   │  (Port 1883)   │ │
+│  └───────┬────────┘   └───────┬────────┘   └───────┬────────┘   └───────┬────────┘ │
+└──────────┼────────────────────┼────────────────────┼────────────────────┼──────────┘
+           │                    │                    │                    │
+           ▼                    ▼                    ▼                    ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
 │                           NestJS 11 Backend (Port 3000)                           │
 │                                                                                   │
-│  ┌───────────────────────┐  ┌──────────────────────┐  ┌────────────────────────┐  │
-│  │   Collection Engine   │  │ Normalization Engine │  │ Production Line Svc    │  │
-│  │  • API Collector      │  │ • Deterministic Dedup│  │ • 6-Station Pipeline   │  │
-│  │  • HTML Crawler       │  │ • Conflict Hierarchy │  │ • Batch State Machine  │  │
-│  │  • DB Pg Collector    │  │ • Provenance Capture │  │ • Staleness Alerts     │  │
-│  │  • MQTT Stream        │  │ • Master Data Join   │  │ • Missing-Data Flags   │  │
-│  └───────────┬───────────┘  └──────────┬───────────┘  └───────────┬────────────┘  │
-│              │                         │                          │               │
-│              └─────────────────────────┼──────────────────────────┘               │
+│  ┌──────────────────────┐   ┌──────────────────────┐   ┌───────────────────────┐  │
+│  │  Collection Engine   │   │ Normalization Engine │   │ Production Line Svc   │  │
+│  │  • API Collector     │   │ • Deterministic Dedup│   │ • 6-Station Pipeline  │  │
+│  │  • HTML Web Crawler  │   │ • Conflict Hierarchy │   │ • Batch State Machine │  │
+│  │  • Pg DB Collector   │   │ • Provenance Capture │   │ • Staleness Alerts    │  │
+│  │  • MQTT Telemetry    │   │ • Master Data Join   │   │ • Missing-Data Flags  │  │
+│  └──────────┬───────────┘   └──────────┬───────────┘   └───────────┬───────────┘  │
+│             │                          │                           │              │
+│             └──────────────────────────┼───────────────────────────┘              │
 │                                        ▼                                          │
-│                         ┌─────────────────────────────┐                           │
-│                         │   App Database (PostgreSQL)  │                           │
-│                         │   • data_sources             │                           │
-│                         │   • collection_runs          │                           │
-│                         │   • canonical_events         │                           │
-│                         │   • management_events        │                           │
-│                         └──────────────┬──────────────┘                           │
+│                          ┌───────────────────────────┐                            │
+│                          │ App Database (PostgreSQL) │                            │
+│                          │ • data_sources            │                            │
+│                          │ • collection_runs         │                            │
+│                          │ • canonical_events        │                            │
+│                          │ • management_events       │                            │
+│                          └─────────────┬─────────────┘                            │
 └────────────────────────────────────────┼──────────────────────────────────────────┘
                                          │ REST API (/api)
                                          ▼
 ┌───────────────────────────────────────────────────────────────────────────────────┐
-│                      Next.js 16 + React 19 Frontend (Port 3003)                   │
+│                    Next.js 16 + React 19 Frontend (Port 3003)                     │
 │                                                                                   │
-│   • /sources     — Source registration, schema discovery, collection trigger,     │
-│                    run error inspection, and normalized dataset preview           │
-│   • /production  — Multi-line dashboard, 6-station WIP board, batch cards,        │
-│                    staleness / missing-data indicators, and management actions    │
-│   • /            — Factory overview & KPI throughput summary                      │
+│  • /sources    — Source registration, schema discovery, collection trigger,       │
+│                  run error inspection, and normalized dataset preview             │
+│  • /production — Multi-line dashboard, 6-station WIP board, batch cards,          │
+│                  staleness / missing-data indicators, and management actions      │
+│  • /           — Factory overview & KPI throughput summary                        │
 └───────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -103,7 +98,7 @@ npm install
 # 4. Start all services concurrently (API, Supplier, MQTT, Backend, Frontend)
 npm run dev
 
-# 5. In another terminal, run backend unit test suites (26 tests)
+# 5. In another terminal, run backend unit test suites
 npm test
 ```
 
@@ -111,6 +106,121 @@ npm test
 > * When accessing PostgreSQL from your **host machine** (local dev), connect to `localhost:5434` for `app-db` and `localhost:5433` for `fixture-db`.
 > * When accessing PostgreSQL from **inside Docker containers**, connect to hostname `app-db:5432` and `fixture-db:5432`.
 > * The backend defaults to `APP_DB_PORT=5434` in development and fallback mode to match the host docker port mapping.
+
+---
+
+## 🗺️ User Manual: End-to-End Workflow
+
+Once the platform is running, follow this workflow to go from raw sources to a live production dashboard.
+
+### Step 1 — Open the Data Sources page
+
+Navigate to **[http://localhost:3003/sources](http://localhost:3003/sources)**.
+
+This is the control panel for all data ingestion. It lists all registered sources with their type, last collection time, and status.
+
+![Sources Page](assets/sources_page.png)
+
+---
+
+### Step 2 — Register a Source
+
+Click **"Register Source"** and fill in the form:
+
+#### Register Source #1 — Factory REST API
+| Field | Value |
+|:---|:---|
+| **Name** | `Factory REST API` *(pre-filled)* |
+| **Type** | `API` |
+| **Base URL** | `http://fixture-api:3001` *(pre-filled)* |
+| **Target Endpoint** | `/dispatch` *(pre-filled)* |
+
+Click **"Register Source"**.
+
+![Register Source](assets/register_source.png)
+
+#### Register Source #2 — Supplier HTML Crawler
+| Field | Value |
+|:---|:---|
+| **Name** | `Supplier Delivery Crawler` *(pre-filled)* |
+| **Type** | `CRAWLER` |
+| **Start URL** | `http://fixture-supplier:3002/deliveries?page=1` *(pre-filled)* |
+
+Click **"Register Source"**.
+
+#### Register Source #3 — Plant Production Database
+| Field | Value |
+|:---|:---|
+| **Name** | `Plant Production DB` *(pre-filled)* |
+| **Type** | `DATABASE` |
+| **Host** | `fixture-db` |
+| **Port** | `5432` |
+| **Database** | `factory_production` |
+| **Username** | `factory` |
+| **Password** | `factory_secret` |
+| **Target Table** | `production_events` *(pre-filled)* |
+
+Click **"Register Source"**.
+
+> **Docker networking note:** Use container hostnames (`fixture-api`, `fixture-db`, `fixture-supplier`) when running via Docker Compose. Use `localhost` with the mapped ports (`3001`, `5433`, `3002`) when running locally.
+
+---
+
+### Step 3 — Run Collection
+
+For each registered source, click **"Collect Now"** on its source card.
+
+- The button changes to a **"Stop"** spinner while ingestion is in progress. (MQTT only)
+- Once complete, the **collection history drawer** opens, showing duration, records collected, records failed, and error details for each run.
+
+> **Tip:** Collect the REST API source multiple times on purpose to see how the deduplication engine marks repeat records as `DUPLICATE` without double-counting.
+
+---
+
+### Step 4 — Preview Normalized Records
+
+After collection, click the **"Operational Dataset Preview"** tab on the Sources page.
+
+This table shows all canonical events ingested across all runs with pagination, including:
+- `batchId`, `stationCode`, `quantity`, `eventTime`
+- **Source provenance** — which source type and run produced each record
+- **Status badge** — `ACCEPTED`, `DUPLICATE`, or `CONFLICT`
+- **Raw Payload** — click `Copy JSON` to inspect the original payload from the source
+
+![Operational Dataset Preview](assets/event_list.png)
+
+
+---
+
+### Step 5 — Inspect the Production Dashboard
+
+Navigate to **[http://localhost:3003/production](http://localhost:3003/production)**.
+
+The dashboard shows all active production lines (`LINE-A`, `LINE-B`) and their batch cards:
+- **Current station** — the furthest station reached by each batch
+- **Batch state** — `PLANNED`, `IN_PROGRESS`, `BLOCKED`, or `COMPLETED`
+- **Data freshness** — minutes since the last event, with a 🔴 stale indicator after 15 min (configurable)
+- **Missing-data indicator** — 🟡 if a later station exists but an earlier one is missing
+
+![Production Dashboard](assets/production_page.png)
+
+Click any batch card to open the **Batch Detail Modal** and inspect its full station history, source provenance, and management action log.
+
+![Batch Detail Modal](assets/batch_details.png)
+
+---
+
+### Step 6 — Apply a Management Action
+
+Inside any batch's detail modal:
+- **Block Batch** — places a supervisory hold; the batch state changes to `BLOCKED` ⛔
+- **Resume Batch** — clears the hold; the state returns to `IN_PROGRESS`
+- **Acknowledge** — logs an acknowledgment event to the audit trail
+- **Add Note** — attaches a free-text operational note
+
+All actions are append-only. No source history is ever overwritten.
+
+![Management Events](assets/manage_events.png)
 
 ---
 
@@ -214,6 +324,7 @@ This section documents the design choices made where the requirements left imple
 | **Dedup enforced in application code, not DB unique constraint** | Duplicate records with `(sourceType, sourceRecordId)` are intentionally preserved with `status: DUPLICATE` for complete audit trail provenance. A DB unique constraint would reject them. | Requires a `findOne` query before every insert to check for existing records. At the scale of an industrial laundry operation (hundreds/thousands of events), this is acceptable. At millions of events, a DB upsert strategy would be more efficient. |
 | **Conflict resolution is bidirectional** | When a higher-priority source arrives after a lower-priority one, the existing record is demoted to `CONFLICT` and the new one becomes `ACCEPTED`. When a lower-priority source arrives after a higher-priority one, the incoming record is immediately marked `CONFLICT`. | This ensures the highest-priority observation always wins regardless of arrival order, but it means historical records can change status retroactively. |
 | **`CRAWLER` and `MQTT` share the same priority level (1)** | Both are considered low-fidelity sources. Crawler data is scraped HTML (inherently fragile), and MQTT telemetry is sensor data (high volume, lower semantic precision). | If a crawler and MQTT event conflict for the same `(batchId, stationCode)`, the first one to arrive wins. A more sophisticated approach could use timestamp-based resolution within the same priority tier. |
+| **Normalized records preview uses server-side pagination** | The `GET /api/collection/events?page=&limit=&batchId=` endpoint paginates canonical events at the database level using TypeORM's `.skip()` / `.take()` and returns `{ data, total, page, limit }`. The frontend's Operational Dataset Preview table drives pagination by sending `page` and `limit` query parameters. | Keeps payloads small and constant regardless of the total event count — important when MQTT sources can produce high-volume continuous telemetry. The trade-off is that sorting and filtering are constrained to what the backend exposes as query parameters (currently `batchId`); arbitrary client-side column sorting requires a round-trip or a full fetch. |
 
 ### Batch Master Data
 
@@ -258,7 +369,7 @@ This section documents the design choices made where the requirements left imple
 
 | Decision | Rationale | Trade-Off |
 |:---|:---|:---|
-| **Fixed salt for `scrypt` key derivation** | The salt used with `scrypt` to derive the AES key from `ENCRYPTION_KEY` is a fixed string (`celesnity-laundry-platform`). | Simpler implementation. The `ENCRYPTION_KEY` itself provides the entropy. A per-record random salt would add defense-in-depth but would require storing the salt alongside each encrypted value, adding schema complexity. |
+| **Fixed salt for `scrypt` key derivation** | The salt used with `scrypt` to derive the AES key from `ENCRYPTION_KEY` is a fixed string. | Simpler implementation. The `ENCRYPTION_KEY` itself provides the entropy. A per-record random salt would add defense-in-depth but would require storing the salt alongside each encrypted value, adding schema complexity. |
 | **`ENCRYPTION_KEY` defaults provided in `docker-compose.yml`** | A default hex key is embedded in `docker-compose.yml` so the application works out-of-the-box without manual setup. | **This default must be replaced in any real deployment.** The `.env.example` file explicitly instructs users to generate a unique key. |
 
 ### Frontend Design
