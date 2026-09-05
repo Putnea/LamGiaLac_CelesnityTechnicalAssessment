@@ -10,9 +10,23 @@ interface RegisterSourceModalProps {
   onCreated: (source: DataSource) => void;
 }
 
+const DEFAULT_SOURCE_NAMES: Record<SourceType, string> = {
+  [SourceType.API]: 'Factory REST API',
+  [SourceType.CRAWLER]: 'Supplier Delivery Crawler',
+  [SourceType.DATABASE]: 'Plant Production DB',
+  [SourceType.MQTT]: 'Machine Telemetry MQTT',
+};
+
+const DEFAULT_TARGETS: Record<SourceType, string> = {
+  [SourceType.API]: '/dispatch',
+  [SourceType.CRAWLER]: 'http://fixture-supplier:3002/deliveries?page=1',
+  [SourceType.DATABASE]: 'production_events',
+  [SourceType.MQTT]: 'factory/line/+/station/+/batch/+',
+};
+
 export function RegisterSourceModal({ isOpen, onClose, onCreated }: RegisterSourceModalProps) {
-  const [name, setName] = useState('');
   const [type, setType] = useState<SourceType>(SourceType.API);
+  const [name, setName] = useState(DEFAULT_SOURCE_NAMES[SourceType.API]);
 
   // API config
   const [apiBaseUrl, setApiBaseUrl] = useState('http://fixture-api:3001');
@@ -32,12 +46,21 @@ export function RegisterSourceModal({ isOpen, onClose, onCreated }: RegisterSour
   const [mqttBrokerUrl, setMqttBrokerUrl] = useState('mqtt://mqtt-broker:1883');
   const [mqttTopicPattern, setMqttTopicPattern] = useState('factory/line/+/station/+/batch/+');
 
-  const [selectedTarget, setSelectedTarget] = useState('');
+  const [selectedTarget, setSelectedTarget] = useState(DEFAULT_TARGETS[SourceType.API]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  function handleTypeChange(newType: SourceType) {
+    const isDefaultName = Object.values(DEFAULT_SOURCE_NAMES).includes(name) || !name.trim();
+    setType(newType);
+    if (isDefaultName) {
+      setName(DEFAULT_SOURCE_NAMES[newType]);
+    }
+    setSelectedTarget(DEFAULT_TARGETS[newType]);
+  }
 
   function buildPayload() {
     let config: Record<string, any> = {};
@@ -62,13 +85,7 @@ export function RegisterSourceModal({ isOpen, onClose, onCreated }: RegisterSour
       credentials,
       selectedTarget:
         selectedTarget ||
-        (type === SourceType.API
-          ? '/receiving'
-          : type === SourceType.DATABASE
-            ? 'production_events'
-            : type === SourceType.MQTT
-              ? mqttTopicPattern
-              : crawlerStartUrl),
+        DEFAULT_TARGETS[type],
     };
   }
 
@@ -139,13 +156,7 @@ export function RegisterSourceModal({ isOpen, onClose, onCreated }: RegisterSour
                 <button
                   key={t}
                   type="button"
-                  onClick={() => {
-                    setType(t);
-                    if (t === SourceType.API) setSelectedTarget('/receiving');
-                    else if (t === SourceType.DATABASE) setSelectedTarget('production_events');
-                    else if (t === SourceType.CRAWLER) setSelectedTarget(crawlerStartUrl);
-                    else if (t === SourceType.MQTT) setSelectedTarget(mqttTopicPattern);
-                  }}
+                  onClick={() => handleTypeChange(t)}
                   className={`py-2 px-2.5 rounded-lg text-xs font-semibold text-center border transition-all ${type === t
                     ? 'bg-blue-600/20 text-blue-400 border-blue-500/50 shadow-sm'
                     : 'bg-slate-950/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
@@ -176,8 +187,7 @@ export function RegisterSourceModal({ isOpen, onClose, onCreated }: RegisterSour
                 <input
                   type="text"
                   value={selectedTarget}
-                  placeholder="/batches, /receiving, /dispatch"
-                  defaultValue={"/dispatch"}
+                  placeholder="/dispatch, /receiving, /batches"
                   onChange={(e) => setSelectedTarget(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-100 text-sm font-mono"
                 />
