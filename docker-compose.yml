@@ -1,0 +1,155 @@
+services:
+  # ── Application Database ─────────────────────────────────────────────────────
+  app-db:
+    image: postgres:16-alpine
+    container_name: celesnity_app_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${APP_DB_USERNAME:-celesnity}
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD:-celesnity_secret}
+      POSTGRES_DB: ${APP_DB_DATABASE:-celesnity_app}
+    ports:
+      - "5434:5432"
+    volumes:
+      - app_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${APP_DB_USERNAME:-celesnity} -d ${APP_DB_DATABASE:-celesnity_app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Fixture Production Database (simulates external factory DB source) ────────
+  fixture-db:
+    image: postgres:16-alpine
+    container_name: celesnity_fixture_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${FIXTURE_DB_USERNAME:-factory}
+      POSTGRES_PASSWORD: ${FIXTURE_DB_PASSWORD:-factory_secret}
+      POSTGRES_DB: ${FIXTURE_DB_DATABASE:-factory_production}
+    ports:
+      - "5433:5432"
+    volumes:
+      - fixture_db_data:/var/lib/postgresql/data
+      - ./packages/fixtures/production-db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./packages/fixtures/production-db/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FIXTURE_DB_USERNAME:-factory} -d ${FIXTURE_DB_DATABASE:-factory_production}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Fixture REST API (Source #1) ─────────────────────────────────────────────
+  fixture-api:
+    build:
+      context: ./packages/fixtures/api-server
+      dockerfile: Dockerfile
+    container_name: celesnity_fixture_api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Fixture Supplier HTML Site (Source #2) ───────────────────────────────────
+  fixture-supplier:
+    build:
+      context: ./packages/fixtures/supplier-site
+      dockerfile: Dockerfile
+    container_name: celesnity_fixture_supplier
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MQTT Broker ───────────────────────────────────────────────────────────────
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    container_name: celesnity_mqtt_broker
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./packages/fixtures/mqtt-simulator/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  # ── MQTT Telemetry Simulator ─────────────────────────────────────────────────
+  mqtt-simulator:
+    build:
+      context: ./packages/fixtures/mqtt-simulator
+      dockerfile: Dockerfile
+    container_name: celesnity_mqtt_simulator
+    restart: unless-stopped
+    depends_on:
+      - mqtt-broker
+    environment:
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://mqtt-broker:1883}
+
+  # ── NestJS Backend ───────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./packages/backend
+      dockerfile: Dockerfile
+    container_name: celesnity_backend
+    restart: unless-stopped
+    depends_on:
+      app-db:
+        condition: service_healthy
+      fixture-db:
+        condition: service_healthy
+      fixture-api:
+        condition: service_healthy
+      fixture-supplier:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      APP_DB_HOST: app-db
+      APP_DB_PORT: 5432
+      APP_DB_USERNAME: ${APP_DB_USERNAME:-celesnity}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-celesnity_secret}
+      APP_DB_DATABASE: ${APP_DB_DATABASE:-celesnity_app}
+      FIXTURE_API_URL: ${FIXTURE_API_URL:-http://fixture-api:3001}
+      FIXTURE_SUPPLIER_URL: ${FIXTURE_SUPPLIER_URL:-http://fixture-supplier:3002}
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mqtt://mqtt-broker:1883}
+      MQTT_ENABLED: ${MQTT_ENABLED:-false}
+      STALE_THRESHOLD_MINUTES: ${STALE_THRESHOLD_MINUTES:-15}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-49ec58c66c9c6992c0f4305cf0af1f301876328926d373dcd4b0ca3ae70cf992}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3003}
+      FIXTURE_DB_HOST: ${FIXTURE_DB_HOST:-fixture-db}
+      FIXTURE_DB_PORT: ${FIXTURE_DB_PORT:-5432}
+      FIXTURE_DB_USERNAME: ${FIXTURE_DB_USERNAME:-factory}
+      FIXTURE_DB_PASSWORD: ${FIXTURE_DB_PASSWORD:-factory_secret}
+      FIXTURE_DB_DATABASE: ${FIXTURE_DB_DATABASE:-factory_production}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Next.js Frontend ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./packages/frontend
+      dockerfile: Dockerfile
+    container_name: celesnity_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3003:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+
+volumes:
+  app_db_data:
+  fixture_db_data:

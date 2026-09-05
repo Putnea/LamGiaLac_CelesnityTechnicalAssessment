@@ -1,0 +1,20 @@
+{
+  "name": "fixture-supplier-site",
+  "version": "1.0.0",
+  "description": "Celesnity fixture supplier HTML site — paginated delivery records for crawling (TypeScript)",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

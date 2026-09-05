@@ -1,0 +1,25 @@
+{
+  "name": "celesnity-laundry-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Celesnity Industrial Laundry Factory Data Platform",
+  "workspaces": [
+    "packages/backend",
+    "packages/frontend",
+    "packages/fixtures/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n \"API,SUPPLIER,MQTT,BACKEND,FRONTEND\" -c \"cyan,magenta,yellow,blue,green\" \"npm run dev:fixtures:api\" \"npm run dev:fixtures:supplier\" \"npm run dev:fixtures:mqtt\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run start:dev --workspace=packages/backend",
+    "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "dev:fixtures:api": "npm start --workspace=packages/fixtures/api-server",
+    "dev:fixtures:supplier": "npm start --workspace=packages/fixtures/supplier-site",
+    "dev:fixtures:mqtt": "npm start --workspace=packages/fixtures/mqtt-simulator",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspace=packages/backend",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

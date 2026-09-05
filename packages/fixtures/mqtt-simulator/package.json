@@ -1,0 +1,19 @@
+{
+  "name": "fixture-mqtt-simulator",
+  "version": "1.0.0",
+  "description": "Celesnity MQTT telemetry simulator — publishes washing and drying machine data (TypeScript)",
+  "main": "src/simulator.ts",
+  "scripts": {
+    "dev": "tsx watch src/simulator.ts",
+    "build": "tsc",
+    "start": "tsx src/simulator.ts"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
